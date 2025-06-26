@@ -66,21 +66,63 @@ J -- coupling constant
 
 return the Ising tensor used to converge the MPS to its staidy state at the temperature beta without MPO
 """
-function isingtensor(J, i, h, t)
-    ZZ = op("Z", sites, i) * op("Z", sites, i + 1)
-    X = op("X", sites, i)
-    G = exp(-t * J * ZZ - t * h * X)
-    return replaceprime(G, 0 => 1)
+function evolutiontensor(J, i, h, dt)
+    gatelist = Vector{}
+    for i in 1:N-1
+        ZZ = op("Z", sites, i) * op("Z", sites, i + 1)
+        X = op("X", sites, i)
+        G = exp(-dt * J * ZZ - dt * h * X)
+        push!(gatelist, replaceprime(G, 0 => 1))
+    end
 end
 
 """
+beta -- inverse temperature
+j -- coupling constant
+dim -- physical dimension
+
 return the ising tensor for tebd with MPO format but without disorder
 """
-function isingtensormpo(beta, j, dim)
+function isingtensormpo(beta, j, dim=2)
     sₕ = Index(dim, "horiz")
     sₕ′ = Index(dim, "horiz'")
     sᵥ = Index(dim, "vert")
     sᵥ′ = Index(dim, "vert'")
     MPO = ising_mpo(sₕ => sₕ′, sᵥ => sᵥ′, beta, J=j)
     return MPO
+end
+
+"""
+
+return the vector of ising gates to apply on the MPS
+"""
+function isinggates(mps, beta, J, h=0)
+    gateslist = Vector{}
+    n = length(mps)
+    for i in 1:n-1
+        sₕ, sₕ′ = pair_sₕ
+        sᵥ, sᵥ′ = pair_sᵥ
+        @assert dim(sₕ) == dim(sᵥ)
+        d = dim(sₕ)
+        T = ITensor(sₕ, sₕ′, sᵥ, sᵥ′)
+        for i in 1:d
+            T[i, i, i, i] = 1.0
+        end
+        s̃ₕ, s̃ₕ′, s̃ᵥ, s̃ᵥ′ = sim.((sₕ, sₕ′, sᵥ, sᵥ′))
+        T̃ = T * δ(sₕ, s̃ₕ) * δ(sₕ′, s̃ₕ′) * δ(sᵥ, s̃ᵥ) * δ(sᵥ′, s̃ᵥ′)
+        Q = [exp(beta * J) exp(-beta * J); exp(-beta * J) exp(beta * J)]
+        X = sqrt(Q)
+        Xₕ = itensor(vec(X), s̃ₕ, sₕ)
+        Xₕ′ = itensor(vec(X), s̃ₕ′, sₕ′)
+        Xᵥ = itensor(vec(X), s̃ᵥ, sᵥ)
+        Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
+        push!(gateslist, T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ)
+    end
+end
+
+"""
+
+"""
+function tebdorder2(mps, gatelist)
+    
 end
