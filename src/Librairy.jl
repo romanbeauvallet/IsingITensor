@@ -1,5 +1,6 @@
 #!usr/bin/env julia
 using ITensors
+import ITensors: apply!
 using ITensorMPS
 using LinearAlgebra
 using QuadGK
@@ -128,10 +129,15 @@ gatelist -- vector of gates you apply on mps
 
 return the converged mps for the contraction of the 2D Ising tensor networks with boundary mps algorithm
 """
-function tebdorder2!(mps, gatelist, cutoff, Dmax)
+function tebdorder2(mps, gatelist, cutoff, Dmax)
     n = length(mps)
+    copymps = deepcopy(mps)
+    @show length(gatelist)
     for j in 1:div(n, 2)
-        apply!(mps, gatelist[j],(2*j, 2*j + 1); maxdim=Dmax, cutoff)
+        @show j
+        @show gatelist[1]
+        @show copymps[1], copymps[2]
+        copymps = apply(gatelist[j], copymps, sites = (2*j-1, 2*j); maxdim=Dmax, cutoff)
     end
-    return mps
+    return copymps
 end

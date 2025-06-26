@@ -4,6 +4,6 @@ module IsingITensor
 include("Librairy.jl")
 
 export hilberthalfspin, initnewmpshalfspin, initnewrandomhalfspin
-export isingtensor, isinggates
+export isingtensor, isinggates, tebdorder2
 
 end # module IsingITensor
