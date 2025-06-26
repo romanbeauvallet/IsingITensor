@@ -66,6 +66,21 @@ J -- coupling constant
 
 return the Ising tensor used to converge the MPS to its staidy state at the temperature beta without MPO
 """
-function isingtensor(beta, J)
+function isingtensor(J, i, h, t)
+    ZZ = op("Z", sites, i) * op("Z", sites, i + 1)
+    X = op("X", sites, i)
+    G = exp(-t * J * ZZ - t * h * X)
+    return replaceprime(G, 0 => 1)
+end
 
+"""
+return the ising tensor for tebd with MPO format but without disorder
+"""
+function isingtensormpo(beta, j, dim)
+    sₕ = Index(dim, "horiz")
+    sₕ′ = Index(dim, "horiz'")
+    sᵥ = Index(dim, "vert")
+    sᵥ′ = Index(dim, "vert'")
+    MPO = ising_mpo(sₕ => sₕ′, sᵥ => sᵥ′, beta, J=j)
+    return MPO
 end
