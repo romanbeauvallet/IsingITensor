@@ -1,5 +1,6 @@
 #!usr/bin/env julia
 using ITensors
+using ITensorMPS
 using LinearAlgebra
 using QuadGK
 
@@ -27,24 +28,44 @@ end
 
 """
 N -- number of sites
-s -- spin value
 
 return the right hilbert space for the system
 """
-function hilbert(N, s)
-    return ITensors.siteinds("S = $s", N)
+function hilberthalfspin(N)
+    physical = ITensors.siteinds("SpinHalf", N)
+    return physical
 end
 
 """
 N -- number of sites
-s -- spin value
-type -- specify the value of the physical indexes
+D -- bond dimension in the MPS (applied to each tensor)
 
-return an initialization of a MPS
+return an initialization of a MPS, note that the intrication can be nul with D = 1
 """
-function initnewmps(N, s, type::Vector{})
-    site = hilbert(N, s)
-    psi = ITensor.MPS(site, type)
+function initnewmpshalfspin(N, D)
+    site = hilberthalfspin(N)
+    psi = MPS(site, linkdims=D)
+    return psi
 end
 
+"""
+N -- number of sites
+Dmax -- maximum bond dimension in the MPS 
 
+return an random initialization of a MPS, the MPS is already normalized 
+"""
+function initnewrandomhalfspin(N, Dmax)
+    site = hilberthalfspin(N)
+    psi = random_mps(site, linkdims=Dmax)
+    return psi
+end
+
+"""
+beta -- inverse temmperature
+J -- coupling constant
+
+return the Ising tensor used to converge the MPS to its staidy state at the temperature beta without MPO
+"""
+function isingtensor(beta, J)
+
+end
