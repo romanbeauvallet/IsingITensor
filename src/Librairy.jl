@@ -96,10 +96,11 @@ end
 
 return the vector of ising gates to apply on the MPS
 """
-function isinggates(mps, beta, J, h=0)
-    gateslist = Vector{}
+function isinggates(mps, beta, pair_sₕ, pair_sᵥ, J, h=0)
     n = length(mps)
-    for i in 1:n-1
+    q = div(n, 2) #a gate applies on two sites
+    gateslist = Vector{ITensor}(undef,q)
+    for i in 1:q
         sₕ, sₕ′ = pair_sₕ
         sᵥ, sᵥ′ = pair_sᵥ
         @assert dim(sₕ) == dim(sᵥ)
@@ -116,13 +117,21 @@ function isinggates(mps, beta, J, h=0)
         Xₕ′ = itensor(vec(X), s̃ₕ′, sₕ′)
         Xᵥ = itensor(vec(X), s̃ᵥ, sᵥ)
         Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
-        push!(gateslist, T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ)
+        gateslist[i] = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
     end
+    return gateslist
 end
 
 """
+mps -- boundary mps 
+gatelist -- vector of gates you apply on mps
 
+return the converged mps for the contraction of the 2D Ising tensor networks with boundary mps algorithm
 """
-function tebdorder2(mps, gatelist)
-    
+function tebdorder2!(mps, gatelist, cutoff, Dmax)
+    n = length(mps)
+    for j in 1:div(n, 2)
+        apply!(mps, gatelist[j],(2*j, 2*j + 1); maxdim=Dmax, cutoff)
+    end
+    return mps
 end
