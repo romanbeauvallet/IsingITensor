@@ -118,10 +118,20 @@ function isinggates(mps, beta, pair_sₕ, pair_sᵥ, J, h=0)
         Xₕ′ = itensor(vec(X), s̃ₕ′, sₕ′)
         Xᵥ = itensor(vec(X), s̃ᵥ, sᵥ)
         Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
-        gateslist[i] = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
+        inter = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
+        s1 = siteind(mps, 2*i-1)     # indice physique du site i
+        s2 = siteind(mps, 2*i)   # indice physique du site i+1
+        # On crée deux nouveaux indices "primés" (output)
+        s1p = prime(s1)
+        s2p = prime(s2)
+        inds_inter = inds(inter)
+        inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
+        gateslist[i] = inter_aligned
     end
     return gateslist
 end
+
+#utiliser la fonction ITensorMPS.TwoSiteGate
 
 """
 mps -- boundary mps 
@@ -132,12 +142,12 @@ return the converged mps for the contraction of the 2D Ising tensor networks wit
 function tebdorder2(mps, gatelist, cutoff, Dmax)
     n = length(mps)
     copymps = deepcopy(mps)
-    @show length(gatelist)
+    #@show length(gatelist)
     for j in 1:div(n, 2)
-        @show j
+        #@show j
         @show gatelist[1]
         @show copymps[1], copymps[2]
-        copymps = apply(gatelist[j], copymps, sites = (2*j-1, 2*j); maxdim=Dmax, cutoff)
+        copymps = apply(gatelist[j], copymps, sites = [2*j-1, 2*j]; maxdim=Dmax, cutoff)
     end
     return copymps
 end

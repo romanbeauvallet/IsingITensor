@@ -30,7 +30,7 @@ svu = Index(dim, "vert up")
 randomps = initnewrandomhalfspin(N, Dmax)
 mps = deepcopy(randomps)
 tensor = isinggates(randomps, beta, shl => shr, svd => svu, J)
-@show length(tensor), tensor[4]
+#@show length(tensor), tensor[4]
 
 tebdorder2(mps, tensor, cutoff, Dmaxtebd)
 
