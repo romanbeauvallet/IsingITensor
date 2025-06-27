@@ -1,6 +1,6 @@
 #!usr/bin/env julia
 using ITensors
-import ITensors: apply!
+import ITensorMPS: apply!
 using ITensorMPS
 using LinearAlgebra
 using QuadGK
@@ -97,36 +97,50 @@ end
 
 return the vector of ising gates to apply on the MPS
 """
-function isinggates(mps, beta, pair_sₕ, pair_sᵥ, J, h=0)
+function isinggates(mps, beta, J, parity::String, h=0)
     n = length(mps)
     q = div(n, 2) #a gate applies on two sites
-    gateslist = Vector{ITensor}(undef,q)
-    for i in 1:q
-        sₕ, sₕ′ = pair_sₕ
-        sᵥ, sᵥ′ = pair_sᵥ
-        @assert dim(sₕ) == dim(sᵥ)
-        d = dim(sₕ)
-        T = ITensor(sₕ, sₕ′, sᵥ, sᵥ′)
-        for i in 1:d
-            T[i, i, i, i] = 1.0
+    sₕ, sₕ′ = (s1, s1p)
+    sᵥ, sᵥ′ = (s2, s2p)
+    @assert dim(sₕ) == dim(sᵥ)
+    d = dim(sₕ)
+    T = ITensor(sₕ, sₕ′, sᵥ, sᵥ′)
+    for i in 1:d
+        T[i, i, i, i] = 1.0
+    end
+    s̃ₕ, s̃ₕ′, s̃ᵥ, s̃ᵥ′ = sim.((sₕ, sₕ′, sᵥ, sᵥ′))
+    T̃ = T * δ(sₕ, s̃ₕ) * δ(sₕ′, s̃ₕ′) * δ(sᵥ, s̃ᵥ) * δ(sᵥ′, s̃ᵥ′)
+    Q = [exp(beta * J) exp(-beta * J); exp(-beta * J) exp(beta * J)]
+    X = sqrt(Q)
+    Xₕ = itensor(vec(X), s̃ₕ, sₕ)
+    Xₕ′ = itensor(vec(X), s̃ₕ′, sₕ′)
+    Xᵥ = itensor(vec(X), s̃ᵥ, sᵥ)
+    Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
+    inter = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
+    if parity =="even"
+        gateslist = Vector{ITensor}(undef,q)
+        for i in 1:1:q
+            s1 = siteind(mps, 2*i-1)     # indice physique du site i
+            s2 = siteind(mps, 2*i)   # indice physique du site i+1
+            # On crée deux nouveaux indices "primés" (output)
+            s1p = prime(s1)
+            s2p = prime(s2)
+            inds_inter = inds(inter)
+            inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
+            gateslist[i] = inter_aligned
         end
-        s̃ₕ, s̃ₕ′, s̃ᵥ, s̃ᵥ′ = sim.((sₕ, sₕ′, sᵥ, sᵥ′))
-        T̃ = T * δ(sₕ, s̃ₕ) * δ(sₕ′, s̃ₕ′) * δ(sᵥ, s̃ᵥ) * δ(sᵥ′, s̃ᵥ′)
-        Q = [exp(beta * J) exp(-beta * J); exp(-beta * J) exp(beta * J)]
-        X = sqrt(Q)
-        Xₕ = itensor(vec(X), s̃ₕ, sₕ)
-        Xₕ′ = itensor(vec(X), s̃ₕ′, sₕ′)
-        Xᵥ = itensor(vec(X), s̃ᵥ, sᵥ)
-        Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
-        inter = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
-        s1 = siteind(mps, 2*i-1)     # indice physique du site i
-        s2 = siteind(mps, 2*i)   # indice physique du site i+1
-        # On crée deux nouveaux indices "primés" (output)
-        s1p = prime(s1)
-        s2p = prime(s2)
-        inds_inter = inds(inter)
-        inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
-        gateslist[i] = inter_aligned
+    else 
+        gateslist = Vector{ITensor}(undef,q-1)
+        for i in 1:1:q-1
+            s1 = siteind(mps, 2*i)     # indice physique du site i
+            s2 = siteind(mps, 2*i+1)   # indice physique du site i+1
+            # On crée deux nouveaux indices "primés" (output)
+            s1p = prime(s1)
+            s2p = prime(s2)
+            inds_inter = inds(inter)
+            inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
+            gateslist[i] = inter_aligned
+        end
     end
     return gateslist
 end
@@ -139,15 +153,21 @@ gatelist -- vector of gates you apply on mps
 
 return the converged mps for the contraction of the 2D Ising tensor networks with boundary mps algorithm
 """
-function tebdorder2(mps, gatelist, cutoff, Dmax)
+function tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
     n = length(mps)
     copymps = deepcopy(mps)
     #@show length(gatelist)
-    for j in 1:div(n, 2)
+    for j in 1:n_sweep
         #@show j
-        @show gatelist[1]
-        @show copymps[1], copymps[2]
-        copymps = apply(gatelist[j], copymps, sites = [2*j-1, 2*j]; maxdim=Dmax, cutoff)
+        #@show gatelist[1]
+        #@show copymps[1], copymps[2]
+        gatelist1 = isinggates(mps, beta, J, "even")
+        @show length(gatelist1)
+        copymps = apply(gatelist1, copymps;  maxdim= Dmaxtebd, cutoff = cutoff)
+        @show length(copymps)
+        gatelist2 = isinggates(copymps, beta, J, "odd")
+        @show length(gatelist2)
+        copymps = apply(gatelist2, copymps;  maxdim= Dmaxtebd, cutoff = cutoff)
     end
     return copymps
 end

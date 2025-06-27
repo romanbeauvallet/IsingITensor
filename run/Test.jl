@@ -17,8 +17,9 @@ J = 1
 h = 0.5
 dt = 1e-5
 dim = 2
-beta = 1
+beta = 0.4
 cutoff = 1e-15
+n_sweep = 3
 
 shl = Index(dim, "horiz left")
 shr = Index(dim, "horiz right")
@@ -29,8 +30,10 @@ svu = Index(dim, "vert up")
 
 randomps = initnewrandomhalfspin(N, Dmax)
 mps = deepcopy(randomps)
-tensor = isinggates(randomps, beta, shl => shr, svd => svu, J)
+tensor = isinggates(randomps, beta, J, "even")
 #@show length(tensor), tensor[4]
 
-tebdorder2(mps, tensor, cutoff, Dmaxtebd)
+update = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
+
+@show length(update), size(update[10])
 
