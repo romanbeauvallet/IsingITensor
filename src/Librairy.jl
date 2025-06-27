@@ -96,16 +96,19 @@ end
 
 return the vector of ising gates to apply on the MPS
 """
-function isinggates(mps, beta, J, parity::String, h=0)
+function isinggates(mps, beta, J, parity::String, sz::Bool, h=0)
     n = length(mps)
     q = div(n, 2) #a gate applies on two sites
-    sₕ, sₕ′ = (Index(2, "horiz left"),Index(2, "horiz right"))
+    sₕ, sₕ′ = (Index(2, "horiz left"), Index(2, "horiz right"))
     sᵥ, sᵥ′ = (Index(2, "vert down"), Index(2, "vert up"))
     @assert dim(sₕ) == dim(sᵥ)
     d = dim(sₕ)
     T = ITensor(sₕ, sₕ′, sᵥ, sᵥ′)
     for i in 1:d
         T[i, i, i, i] = 1.0
+    end
+    if sz == true
+        T[2, 2, 2, 2] = -1.0
     end
     s̃ₕ, s̃ₕ′, s̃ᵥ, s̃ᵥ′ = sim.((sₕ, sₕ′, sᵥ, sᵥ′))
     T̃ = T * δ(sₕ, s̃ₕ) * δ(sₕ′, s̃ₕ′) * δ(sᵥ, s̃ᵥ) * δ(sᵥ′, s̃ᵥ′)
@@ -117,29 +120,29 @@ function isinggates(mps, beta, J, parity::String, h=0)
     Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
     inter = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
     inds_inter = inds(inter)
-    if parity =="even"
-        gateslist = Vector{ITensor}(undef,q)
+    if parity == "even"
+        gateslist = Vector{ITensor}(undef, q)
         for i in 1:1:q
-            s1 = siteind(mps, 2*i-1)    # indice physique du site i
-            s2 = siteind(mps, 2*i)  # indice physique du site i+1
+            s1 = siteind(mps, 2 * i - 1)    # indice physique du site i
+            s2 = siteind(mps, 2 * i)  # indice physique du site i+1
             # On crée deux nouveaux indices "primés" (output)
             s1p = prime(s1)
             s2p = prime(s2)
-            inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
+            inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s1, inds_inter[3] => s2, inds_inter[4] => s2p))
             @show inds(inter_aligned)
             gateslist[i] = inter_aligned
         end
-    elseif parity=="odd"
-        gateslist = Vector{ITensor}(undef,q-1)
+    elseif parity == "odd"
+        gateslist = Vector{ITensor}(undef, q - 1)
         for i in 1:1:q-1
-            s1 = siteind(mps, 2*i)  # indice physique du site i
-            s2 = siteind(mps, 2*i+1)   # indice physique du site i+1
+            s1 = siteind(mps, 2 * i)  # indice physique du site i
+            s2 = siteind(mps, 2 * i + 1)   # indice physique du site i+1
             # On crée deux nouveaux indices "primés" (output)
             s1p = prime(s1)
             s2p = prime(s2)
             #@show s1, s1ps
             #@show inds_inter[1], inds_inter[2]
-            inter_aligned = replaceinds(inter, (inds_inter[1] => s1, inds_inter[2] => s2, inds_inter[3] => s1p, inds_inter[4] => s2p))
+            inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s1, inds_inter[3] => s2, inds_inter[4] => s2p))
             @show inds(inter_aligned)
             gateslist[i] = inter_aligned
         end
@@ -164,13 +167,41 @@ function tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         #@show gatelist[1]
         #@show copymps[1], copymps[2]
         @show j, copymps
-        gatelist1 = isinggates(mps, beta, J, "even")
+        gatelist1 = isinggates(mps, beta, J, "even",false)
         #@show length(gatelist1)
-        copymps = apply(gatelist1, copymps;  maxdim= Dmaxtebd, cutoff = cutoff)
+        copymps = apply(gatelist1, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
+        normalize!(copymps)
         @show copymps
-        gatelist2 = isinggates(copymps, beta, J, "odd")
+        gatelist2 = isinggates(copymps, beta, J, "odd", false)
         @show length(gatelist2)
-        copymps = apply(gatelist2, copymps;  maxdim= Dmaxtebd, cutoff = cutoff)
+        copymps = apply(gatelist2, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
+        normalize!(copymps)
     end
     return copymps
+end
+
+"""
+return the magnetization of the site i 
+"""
+function magnetization!(mps, beta, i, J, Dmaxtebd, cutoff)
+    @show typeof(mps)
+    ind_env = [siteind(mps,i), siteind(mps, i+1)]
+    orthogonalize!(mps, i)
+    @show length(mps)
+    subsites = siteinds(mps)[i:i+1]
+    env = MPS(subsites)
+    env[1] = mps[i]
+    env[2] = mps[i+1]
+    @show typeof(env)
+    site_norm = isinggates(env, beta, J, "even", false)[1]
+    ind_site_norm = inds(site_norm)
+    site_norm_index = replaceinds(site_norm, (ind_site_norm[1]=>prime(ind_env[1]), ind_site_norm[2]=>ind_env[1], ind_site_norm[3]=>ind_env[2], ind_site_norm[4]=>prime(ind_env[1])))
+    site_meas = isinggates(env, beta, J, "even", true)[1]
+    ind_site_meas = inds(site_meas)
+    site_meas_index = replaceinds(site_meas, (ind_site_meas[1]=>prime(ind_env[1]), ind_site_meas[2]=>ind_env[1], ind_site_meas[3]=>ind_env[2], ind_site_meas[4]=>prime(ind_env[1])))
+    env_norm = apply(site_norm_index, env; maxdim=Dmaxtebd, cutoff=cutoff)
+    env_meas = apply(site_meas_index, env; maxdim=Dmaxtebd, cutoff=cutoff)
+    m = inner(env_meas, env_meas)
+    n = inner(env_norm, env_norm)
+    return m/n
 end

@@ -7,7 +7,7 @@ using ITensors
 
 ######## Paramètres ###########
 
-N = 6 #attention prendre N pair
+N = 20 #attention prendre N pair
 s = 1 / 2
 type = ["up"]
 D = 10
@@ -17,9 +17,9 @@ J = 1
 h = 0.5
 dt = 1e-5
 dim = 2
-beta = 0.4
+beta = 0.43
 cutoff = 1e-15
-n_sweep = 10
+n_sweep = 100
 
 shl = Index(dim, "horiz left")
 shr = Index(dim, "horiz right")
@@ -30,10 +30,12 @@ svu = Index(dim, "vert up")
 
 randomps = initnewrandomhalfspin(N, Dmax)
 mps = deepcopy(randomps)
+#@show typeof(mps)
 #tensor = isinggates(randomps, beta, J, "even")
 #@show length(tensor), tensor[4]
 
 update = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
+@show typeof(update)
 
-@show length(update), update[5]
+magnet = magnetization!(update, beta, 10, J, Dmaxtebd, cutoff)
 
