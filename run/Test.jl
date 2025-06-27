@@ -17,7 +17,7 @@ J = 1
 h = 0.5
 dt = 1e-5
 dim = 2
-beta = 0.43
+beta = 0.01
 cutoff = 1e-15
 n_sweep = 100
 
@@ -38,4 +38,9 @@ update = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
 @show typeof(update)
 
 magnet = magnetization!(update, beta, 10, J, Dmaxtebd, cutoff)
+@show magnet
+
+Betalist = collect(0.01:0.1:1)
+
+#on fait les données 
 
