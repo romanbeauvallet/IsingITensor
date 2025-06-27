@@ -1,6 +1,5 @@
 #!usr/bin/env julia
 using ITensors
-import ITensorMPS: apply!
 using ITensorMPS
 using LinearAlgebra
 using QuadGK
@@ -100,8 +99,8 @@ return the vector of ising gates to apply on the MPS
 function isinggates(mps, beta, J, parity::String, h=0)
     n = length(mps)
     q = div(n, 2) #a gate applies on two sites
-    sₕ, sₕ′ = (s1, s1p)
-    sᵥ, sᵥ′ = (s2, s2p)
+    sₕ, sₕ′ = (Index(2, "horiz left"),Index(2, "horiz right"))
+    sᵥ, sᵥ′ = (Index(2, "vert down"), Index(2, "vert up"))
     @assert dim(sₕ) == dim(sᵥ)
     d = dim(sₕ)
     T = ITensor(sₕ, sₕ′, sᵥ, sᵥ′)
@@ -117,28 +116,31 @@ function isinggates(mps, beta, J, parity::String, h=0)
     Xᵥ = itensor(vec(X), s̃ᵥ, sᵥ)
     Xᵥ′ = itensor(vec(X), s̃ᵥ′, sᵥ′)
     inter = T̃ * Xₕ′ * Xᵥ′ * Xₕ * Xᵥ
+    inds_inter = inds(inter)
     if parity =="even"
         gateslist = Vector{ITensor}(undef,q)
         for i in 1:1:q
-            s1 = siteind(mps, 2*i-1)     # indice physique du site i
-            s2 = siteind(mps, 2*i)   # indice physique du site i+1
+            s1 = siteind(mps, 2*i-1)    # indice physique du site i
+            s2 = siteind(mps, 2*i)  # indice physique du site i+1
             # On crée deux nouveaux indices "primés" (output)
             s1p = prime(s1)
             s2p = prime(s2)
-            inds_inter = inds(inter)
             inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
+            @show inds(inter_aligned)
             gateslist[i] = inter_aligned
         end
-    else 
+    elseif parity=="odd"
         gateslist = Vector{ITensor}(undef,q-1)
         for i in 1:1:q-1
-            s1 = siteind(mps, 2*i)     # indice physique du site i
+            s1 = siteind(mps, 2*i)  # indice physique du site i
             s2 = siteind(mps, 2*i+1)   # indice physique du site i+1
             # On crée deux nouveaux indices "primés" (output)
             s1p = prime(s1)
             s2p = prime(s2)
-            inds_inter = inds(inter)
-            inter_aligned = replaceinds(inter, (inds_inter[1] => s1p, inds_inter[2] => s2p, inds_inter[3] => s1, inds_inter[4] => s2))
+            #@show s1, s1ps
+            #@show inds_inter[1], inds_inter[2]
+            inter_aligned = replaceinds(inter, (inds_inter[1] => s1, inds_inter[2] => s2, inds_inter[3] => s1p, inds_inter[4] => s2p))
+            @show inds(inter_aligned)
             gateslist[i] = inter_aligned
         end
     end
@@ -161,10 +163,11 @@ function tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         #@show j
         #@show gatelist[1]
         #@show copymps[1], copymps[2]
+        @show j, copymps
         gatelist1 = isinggates(mps, beta, J, "even")
-        @show length(gatelist1)
+        #@show length(gatelist1)
         copymps = apply(gatelist1, copymps;  maxdim= Dmaxtebd, cutoff = cutoff)
-        @show length(copymps)
+        @show copymps
         gatelist2 = isinggates(copymps, beta, J, "odd")
         @show length(gatelist2)
         copymps = apply(gatelist2, copymps;  maxdim= Dmaxtebd, cutoff = cutoff)
