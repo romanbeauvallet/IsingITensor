@@ -167,7 +167,7 @@ function tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         #@show gatelist[1]
         #@show copymps[1], copymps[2]
         @show j, copymps
-        gatelist1 = isinggates(mps, beta, J, "even",false)
+        gatelist1 = isinggates(mps, beta, J, "even", false)
         #@show length(gatelist1)
         copymps = apply(gatelist1, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
         normalize!(copymps)
@@ -185,7 +185,7 @@ return the magnetization of the site i
 """
 function magnetization!(mps, beta, i, J, Dmaxtebd, cutoff)
     @show typeof(mps)
-    ind_env = [siteind(mps,i), siteind(mps, i+1)]
+    ind_env = [siteind(mps, i), siteind(mps, i + 1)]
     orthogonalize!(mps, i)
     @show length(mps)
     subsites = siteinds(mps)[i:i+1]
@@ -195,13 +195,14 @@ function magnetization!(mps, beta, i, J, Dmaxtebd, cutoff)
     @show typeof(env)
     site_norm = isinggates(env, beta, J, "even", false)[1]
     ind_site_norm = inds(site_norm)
-    site_norm_index = replaceinds(site_norm, (ind_site_norm[1]=>prime(ind_env[1]), ind_site_norm[2]=>ind_env[1], ind_site_norm[3]=>ind_env[2], ind_site_norm[4]=>prime(ind_env[1])))
+    site_norm_index = replaceinds(site_norm, (ind_site_norm[1] => prime(ind_env[1]), ind_site_norm[2] => ind_env[1], ind_site_norm[3] => ind_env[2], ind_site_norm[4] => prime(ind_env[2])))
     site_meas = isinggates(env, beta, J, "even", true)[1]
     ind_site_meas = inds(site_meas)
-    site_meas_index = replaceinds(site_meas, (ind_site_meas[1]=>prime(ind_env[1]), ind_site_meas[2]=>ind_env[1], ind_site_meas[3]=>ind_env[2], ind_site_meas[4]=>prime(ind_env[1])))
+    site_meas_index = replaceinds(site_meas, (ind_site_meas[1] => prime(ind_env[1]), ind_site_meas[2] => ind_env[1], ind_site_meas[3] => ind_env[2], ind_site_meas[4] => prime(ind_env[2])))
+    @show env, site_meas_index
     env_norm = apply(site_norm_index, env; maxdim=Dmaxtebd, cutoff=cutoff)
     env_meas = apply(site_meas_index, env; maxdim=Dmaxtebd, cutoff=cutoff)
     m = inner(env_meas, env_meas)
     n = inner(env_norm, env_norm)
-    return m/n
+    return m / n
 end
