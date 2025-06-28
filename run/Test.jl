@@ -4,6 +4,8 @@ push!(LOAD_PATH, joinpath(@__DIR__, "..", "src"))
 using IsingITensor
 using LinearAlgebra
 using ITensors
+using Plots
+using ProgressMeter
 
 ######## Paramètres ###########
 
@@ -20,6 +22,7 @@ dim = 2
 beta = 0.01
 cutoff = 1e-15
 n_sweep = 100
+site_measure = div(N, 2)
 
 shl = Index(dim, "horiz left")
 shr = Index(dim, "horiz right")
@@ -34,13 +37,30 @@ mps = deepcopy(randomps)
 #tensor = isinggates(randomps, beta, J, "even")
 #@show length(tensor), tensor[4]
 
-update = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
-@show typeof(update)
+magnet = magnetization!(update, beta, site_measure, J, Dmaxtebd, cutoff)
 
-magnet = magnetization!(update, beta, 10, J, Dmaxtebd, cutoff)
-@show magnet
+Betalist = collect(0.01:0.01:1)
 
-Betalist = collect(0.01:0.1:1)
+####### Data #########################
 
-#on fait les données 
+Mpslist = Vector{}()
+Magnetlist = Vector{}()
+Magnetexact = Vector{}()
 
+function void()
+    @showprogress for i in eachindex(Betalist)
+        update = tebdising(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
+        push!(Mpslist, update)
+        magnet = magnetization!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
+        push!(Magnetlist, magnet)
+        push!(Magnetexact, ising_magnetization(Betalist[i]))
+    end
+end
+
+void()
+############### Graphs ############
+
+gr()
+
+plot(Betalist, Magnetlist, label="tebd")
+plot!(Betalist, Magnetexact, label="exact")
