@@ -19,9 +19,9 @@ J = 1
 h = 0.5
 dt = 1e-5
 dim = 2
-beta = 0.01
+beta = 0.44
 cutoff = 1e-15
-n_sweep = 100
+n_sweep = 1000
 site_measure = div(N, 2)
 
 shl = Index(dim, "horiz left")
@@ -34,12 +34,16 @@ svu = Index(dim, "vert up")
 randomps = initnewrandomhalfspin(N, Dmax)
 mps = deepcopy(randomps)
 #@show typeof(mps)
-#tensor = isinggates(randomps, beta, J, "even")
+tensor = isinggates(randomps, beta, J, "even", false)
+#ops(tensor, siteinds("SpinHalf", N))
 #@show length(tensor), tensor[4]
+final = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
+@show final
 
-magnet = magnetization!(update, beta, site_measure, J, Dmaxtebd, cutoff)
 
-Betalist = collect(0.01:0.01:1)
+#magnet = magnetization!(update, beta, site_measure, J, Dmaxtebd, cutoff)
+
+Betalist = collect(0.01:0.01:2)
 
 ####### Data #########################
 
@@ -50,6 +54,7 @@ Magnetexact = Vector{}()
 function void()
     @showprogress for i in eachindex(Betalist)
         update = tebdising(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
+        @show update
         push!(Mpslist, update)
         magnet = magnetization!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
         push!(Magnetlist, magnet)
@@ -57,7 +62,7 @@ function void()
     end
 end
 
-void()
+#void()
 ############### Graphs ############
 
 gr()

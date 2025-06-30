@@ -93,10 +93,25 @@ function isingtensormpo(beta, j, dim=2)
 end
 
 """
+return ising tensor with array type 
+"""
+function isingtensorarray(beta, J)
+    T = zeros(2,2,2,2)
+    T[1,1,1,1] = 1
+    T[2,2,2,2] = 1
+    Q = [exp(beta * J) exp(-beta * J); exp(-beta * J) exp(beta * J)]
+    X = sqrt(Q)
+    @tensor T[i,j,k,l] := D[a, b, c, d] * M[i,a] * M[j,b] * M[k,c] * M[l,d]
+    return T
+
+end 
+
+
+"""
 
 return the vector of ising gates to apply on the MPS
 """
-function isinggates(mps, beta, J, parity::String, sz::Bool, h=0)
+function isinggates(mps, beta, J, parity::String, sz::Bool, h=0) #essayer avec op et le array pour isingtensor
     n = length(mps)
     q = div(n, 2) #a gate applies on two sites
     sₕ, sₕ′ = (Index(2, "horiz left"), Index(2, "horiz right"))
@@ -188,9 +203,10 @@ function magnetization!(mps, beta, i, J, Dmaxtebd, cutoff)
     ind_env = [siteind(mps, i), siteind(mps, i + 1)]
     orthogonalize!(mps, i)
     #@show length(mps)
+    #ne pas faire apply mais juste produit * avec des type ITensor et des bons index 
     subsites = siteinds(mps)[i:i+1]
     env = MPS(subsites)
-    env[1] = mps[i]
+    env[1] = mps[i] 
     env[2] = mps[i+1]
     #@show typeof(env)
     site_norm = isinggates(env, beta, J, "even", false)[1]
