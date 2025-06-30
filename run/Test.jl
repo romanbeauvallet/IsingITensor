@@ -37,9 +37,9 @@ mps = deepcopy(randomps)
 tensor = isinggates(randomps, beta, J, "even", false)
 #ops(tensor, siteinds("SpinHalf", N))
 #@show length(tensor), tensor[4]
-final = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
+final = tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
 @show final
-opera = gates(mps, beta, J)
+opera = gates(mps, beta, J, "even", false)
 @show opera, length(opera)
 
 #magnet = magnetization!(update, beta, site_measure, J, Dmaxtebd, cutoff)
@@ -66,7 +66,7 @@ end
 #void()
 ############### Graphs ############
 
-gr()
+#gr()
 
 #plot(Betalist, Magnetlist, label="tebd")
 #plot!(Betalist, Magnetexact, label="exact")
