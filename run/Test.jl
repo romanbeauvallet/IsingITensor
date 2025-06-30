@@ -21,7 +21,7 @@ dt = 1e-5
 dim = 2
 beta = 0.44
 cutoff = 1e-15
-n_sweep = 1000
+n_sweep = 100
 site_measure = div(N, 2)
 
 shl = Index(dim, "horiz left")
@@ -39,7 +39,8 @@ tensor = isinggates(randomps, beta, J, "even", false)
 #@show length(tensor), tensor[4]
 final = tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
 @show final
-
+opera = gates(mps, beta, J)
+@show opera, length(opera)
 
 #magnet = magnetization!(update, beta, site_measure, J, Dmaxtebd, cutoff)
 
@@ -67,5 +68,5 @@ end
 
 gr()
 
-plot(Betalist, Magnetlist, label="tebd")
-plot!(Betalist, Magnetexact, label="exact")
+#plot(Betalist, Magnetlist, label="tebd")
+#plot!(Betalist, Magnetexact, label="exact")

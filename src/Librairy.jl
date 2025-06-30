@@ -3,6 +3,7 @@ using ITensors
 using ITensorMPS
 using LinearAlgebra
 using QuadGK
+using TensorOperations
 
 ############## Exact Result ############
 
@@ -101,14 +102,25 @@ function isingtensorarray(beta, J)
     T[2,2,2,2] = 1
     Q = [exp(beta * J) exp(-beta * J); exp(-beta * J) exp(beta * J)]
     X = sqrt(Q)
-    @tensor T[i,j,k,l] := D[a, b, c, d] * M[i,a] * M[j,b] * M[k,c] * M[l,d]
-    return T
-
+    @tensor D[i,j,k,l] := T[a, b, c, d] * X[i,a] * X[j,b] * X[k,c] * X[l,d]
+    return D
 end 
 
-
 """
+return the list of gates 
+"""
+function gates(mps, beta, J)
+    tensor = isingtensorarray(beta, J)
+    sites = siteinds(mps)
+    operator = Vector{}()
+    for i in 1:1:div(length(mps), 2)
+        push!(operator, op(tensor, siteind(mps, 2*i-1), siteind(mps, 2*i)))
+    end
+    return operator 
+end
 
+
+""" 
 return the vector of ising gates to apply on the MPS
 """
 function isinggates(mps, beta, J, parity::String, sz::Bool, h=0) #essayer avec op et le array pour isingtensor
