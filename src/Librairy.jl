@@ -236,7 +236,7 @@ function tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         normalize!(copymps)
         #@show copymps
         gatelist2 = gates(copymps, beta, J, "odd", false)
-        for ope in gatelist2    
+        for ope in gatelist2
             copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
 
         end
@@ -273,4 +273,30 @@ function magnetization!(mps, beta, i, J, Dmaxtebd, cutoff)
     m = inner(env_meas, env_meas)
     n = inner(env_norm, env_norm)
     return m / n
+end
+
+function magnetization2!(mps, beta, i, J, Dmaxtebd, cutoff)
+    orthogonalize!(mps, i)
+    env_init = mps[i:i+1]
+    @show env_init
+    env = env_init[1] * env_init[2]
+    tensorising = isingtensorarray(beta, J, true) 
+    index = filter(idx -> any(occursin.("Site", tags(idx))), inds(env))
+    @show inds(env)
+    gatemagnet = op(tensorising, index[1], index[2])
+    semicontract = gatemagnet * env
+    index_semicontract = filter(idx -> any(occursin.("Site", tags(idx))), inds(semicontract))
+    dag = conj(env)
+    index_dag = filter(idx -> any(occursin.("Site", tags(idx))), inds(dag))
+    replaceinds!(dag, (index_dag[1] => index_semicontract[1], index_dag[2] => index_semicontract[2]))
+    m = inner(semicontract, dag)[]
+    tensorising2 = isingtensorarray(beta, J, false)
+    gatemagnet2 = op(tensorising2, index[1], index[2])
+    semicontract2 = gatemagnet2 * env
+    index_semicontract2 = filter(idx -> any(occursin.("Site", tags(idx))), inds(semicontract2))
+    dag2 = conj(env)
+    index_dag2 = filter(idx -> any(occursin.("Site", tags(idx))), inds(dag2))
+    replaceinds!(dag2, (index_dag2[1] => index_semicontract2[1], index_dag2[2] => index_semicontract2[2]))
+    n = inner(semicontract2, dag2)[]
+    return m/n
 end
