@@ -114,7 +114,6 @@ return the list of gates
 """
 function gates(mps, beta, J, parity::String, sz::Bool=false)
     tensor = isingtensorarray(beta, J, sz)
-    sites = siteinds(mps)
     operator = Vector{}()
     if parity == "even"
         for i in 1:1:div(length(mps), 2)
@@ -215,8 +214,8 @@ function tebdising(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
     end
     return copymps
 end
-"""
 
+"""
 return one tebd sweep on the mps with the gates function rather than tebdising
 """
 function tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
@@ -233,14 +232,46 @@ function tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         for ope in gatelist1
             #@show ope
             #@show copymps
-            copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
+            copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff, ortho=:left)
             #@show copymps
         end
         normalize!(copymps)
         #@show copymps
         gatelist2 = gates(copymps, beta, J, "odd", false)
         for ope in gatelist2
-            copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
+            copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff, ortho=:left)
+        end
+        #@show length(gatelist2)
+        normalize!(copymps)
+    end
+    return copymps
+end
+
+"""
+return one tebd sweep on the mps with the gates function rather than tebdising
+"""
+function tebdising3(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
+    n = length(mps)
+    copymps = deepcopy(mps)
+    #@show length(gatelist)
+    for j in 1:n_sweep
+        #@show j
+        #@show gatelist[1]
+        #@show copymps[1], copymps[2]
+        #@show j, copymps
+        gatelist1 = gates(mps, beta, J, "even", false)
+        #@show length(gatelist1)
+        for ope in gatelist1
+            #@show ope
+            #@show copymps
+            copymps = ope * copymps
+            #@show copymps
+        end
+        normalize!(copymps)
+        #@show copymps
+        gatelist2 = gates(copymps, beta, J, "odd", false)
+        for ope in gatelist2
+            copymps = ope * copymps
         end
         #@show length(gatelist2)
         normalize!(copymps)
@@ -279,17 +310,18 @@ end
 
 function magnetization2!(mps, beta, i, J, Dmaxtebd, cutoff)
     orthogonalize!(mps, i)
+    index = [siteind(mps, i), siteind(mps, i + 1)]
     env_init = mps[i:i+1]
     #@show env_init
     env = env_init[1] * env_init[2]
     tensorising = isingtensorarray(beta, J, true)
-    index = filter(i -> hastags(i, "Site"), inds(env))
+    #index = filter(i -> hastags(i, "Site"), inds(env))
     #@show inds(env)
     gatemagnet = op(tensorising, index[1], index[2])
     semicontract = gatemagnet * env
     index_semicontract = filter(i -> hastags(i, "Site"), inds(semicontract))
     dag = conj(env)
-    index_dag = filter(i -> hastags(i, "Site"), inds(env))
+    index_dag = filter(i -> hastags(i, "Site"), inds(dag))
     replaceinds!(dag, (index_dag[1] => index_semicontract[1], index_dag[2] => index_semicontract[2]))
     m = inner(semicontract, dag)[]
     tensorising2 = isingtensorarray(beta, J, false)

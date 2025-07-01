@@ -37,7 +37,7 @@ mps = deepcopy(randomps)
 tensor = isinggates(randomps, beta, J, "even", false)
 #ops(tensor, siteinds("SpinHalf", N))
 #@show length(tensor), tensor[4]
-final = tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
+final = tebdising3(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
 @show final
 opera = gates(mps, beta, J, "even", false)
 #@show opera, length(opera)
@@ -55,10 +55,10 @@ Magnetexact = Vector{}()
 
 function void()
     @showprogress for i in eachindex(Betalist)
-        update = tebdising2(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
+        update = tebdising(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
         #@show update
         push!(Mpslist, update)
-        magnet = magnetization2!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
+        magnet = magnetization!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
         push!(Magnetlist, magnet)
         push!(Magnetexact, ising_magnetization(Betalist[i]))
     end
