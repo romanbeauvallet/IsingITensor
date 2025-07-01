@@ -19,7 +19,7 @@ J = 1
 h = 0.5
 dt = 1e-5
 dim = 2
-beta = 2
+beta = 0.4
 cutoff = 1e-15
 n_sweep = 100
 site_measure = div(N, 2)
@@ -38,12 +38,12 @@ tensor = isinggates(randomps, beta, J, "even", false)
 #ops(tensor, siteinds("SpinHalf", N))
 #@show length(tensor), tensor[4]
 final = tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
-#@show final
+@show final
 opera = gates(mps, beta, J, "even", false)
 #@show opera, length(opera)
 
 magnet = magnetization2!(mps, beta, site_measure, J, Dmaxtebd, cutoff)
-@show magnet
+#@show magnet
 
 Betalist = collect(0.01:0.01:1)
 
@@ -55,8 +55,8 @@ Magnetexact = Vector{}()
 
 function void()
     @showprogress for i in eachindex(Betalist)
-        update = tebdising(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
-        @show update
+        update = tebdising2(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
+        #@show update
         push!(Mpslist, update)
         magnet = magnetization2!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
         push!(Magnetlist, magnet)
@@ -64,10 +64,10 @@ function void()
     end
 end
 
-void()
+#void()
 ############### Graphs ############
 
-gr()
+#gr()
 
-plot(Betalist, Magnetlist, label="tebd")
-plot!(Betalist, Magnetexact, label="exact")
+#plot(Betalist, Magnetlist, label="tebd")
+#plot!(Betalist, Magnetexact, label="exact")

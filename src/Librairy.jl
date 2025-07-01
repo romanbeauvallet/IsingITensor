@@ -231,14 +231,16 @@ function tebdising2(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         gatelist1 = gates(mps, beta, J, "even", false)
         #@show length(gatelist1)
         for ope in gatelist1
+            #@show ope
+            #@show copymps
             copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
+            #@show copymps
         end
         normalize!(copymps)
         #@show copymps
         gatelist2 = gates(copymps, beta, J, "odd", false)
         for ope in gatelist2
             copymps = apply(ope, copymps; maxdim=Dmaxtebd, cutoff=cutoff)
-
         end
         #@show length(gatelist2)
         normalize!(copymps)
@@ -278,25 +280,25 @@ end
 function magnetization2!(mps, beta, i, J, Dmaxtebd, cutoff)
     orthogonalize!(mps, i)
     env_init = mps[i:i+1]
-    @show env_init
+    #@show env_init
     env = env_init[1] * env_init[2]
-    tensorising = isingtensorarray(beta, J, true) 
-    index  = filter(i -> hastags(i, "Site"), inds(env))
-    @show inds(env)
+    tensorising = isingtensorarray(beta, J, true)
+    index = filter(i -> hastags(i, "Site"), inds(env))
+    #@show inds(env)
     gatemagnet = op(tensorising, index[1], index[2])
     semicontract = gatemagnet * env
-    index_semicontract  = filter(i -> hastags(i, "Site"), inds(semicontract))
+    index_semicontract = filter(i -> hastags(i, "Site"), inds(semicontract))
     dag = conj(env)
-    index_dag  = filter(i -> hastags(i, "Site"), inds(env))
+    index_dag = filter(i -> hastags(i, "Site"), inds(env))
     replaceinds!(dag, (index_dag[1] => index_semicontract[1], index_dag[2] => index_semicontract[2]))
     m = inner(semicontract, dag)[]
     tensorising2 = isingtensorarray(beta, J, false)
     gatemagnet2 = op(tensorising2, index[1], index[2])
     semicontract2 = gatemagnet2 * env
-    index_semicontract2  = filter(i -> hastags(i, "Site"), inds(semicontract2))
+    index_semicontract2 = filter(i -> hastags(i, "Site"), inds(semicontract2))
     dag2 = conj(env)
-    index_dag2  = filter(i -> hastags(i, "Site"), inds(env))
+    index_dag2 = filter(i -> hastags(i, "Site"), inds(env))
     replaceinds!(dag2, (index_dag2[1] => index_semicontract2[1], index_dag2[2] => index_semicontract2[2]))
     n = inner(semicontract2, dag2)[]
-    return m/n
+    return m / n
 end
