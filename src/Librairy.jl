@@ -261,17 +261,36 @@ function tebdising3(mps, beta, J, cutoff, n_sweep, Dmaxtebd)
         #@show j, copymps
         gatelist1 = gates(mps, beta, J, "even", false)
         #@show length(gatelist1)
-        for ope in gatelist1
+        m = length(gatelist1)
+        for k in 1:m
             #@show ope
             #@show copymps
-            copymps = ope * copymps
+            #@show inds(copymps[2*k-1]), inds(copymps[2*k]), inds(gatelist1[k])
+            inter = (copymps[2*k-1] * copymps[2*k])
+            #@show inds(inter)
+            update = inter * gatelist1[k]
+            @show inds(update)
+            index = filter(i -> hastags(i, "Site"), inds(update))
+            s1p = findindex(gatelist1[k], index')
+            U, S, V = svd(update, (s1p, linkindex(copymps, 2*k-1)))
             #@show copymps
+            copymps[2*k-1], copymps[2*k] = U, S*V'
         end
         normalize!(copymps)
         #@show copymps
         gatelist2 = gates(copymps, beta, J, "odd", false)
-        for ope in gatelist2
-            copymps = ope * copymps
+        n = length(gatelist2)
+        for j in 1:n
+            #@show inds(copymps[2*j]), inds(copymps[2*j+1]), inds(gatelist1[j])
+            inter = (copymps[2*j] * copymps[2*j+1])
+            #@show inds(inter)
+            update = inter * gatelist2[j]
+            @show inds(update)
+            index = filter(i -> hastags(i, "Site"), inds(update))
+            s1p = findindex(gatelist2[j], index')
+            U, S, V = svd(update, (s1p, linkindex(copymps, 2*j)))
+            #@show copymps
+            copymps[2*j], copymps[2*j+1] = U, S*V'
         end
         #@show length(gatelist2)
         normalize!(copymps)
