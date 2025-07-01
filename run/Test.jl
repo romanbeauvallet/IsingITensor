@@ -19,7 +19,7 @@ J = 1
 h = 0.5
 dt = 1e-5
 dim = 2
-beta = 0.44
+beta = 2
 cutoff = 1e-15
 n_sweep = 100
 site_measure = div(N, 2)
@@ -45,7 +45,7 @@ opera = gates(mps, beta, J, "even", false)
 magnet = magnetization2!(mps, beta, site_measure, J, Dmaxtebd, cutoff)
 @show magnet
 
-Betalist = collect(0.01:0.01:2)
+Betalist = collect(0.01:0.01:1)
 
 ####### Data #########################
 
@@ -58,16 +58,16 @@ function void()
         update = tebdising(mps, Betalist[i], J, cutoff, n_sweep, Dmaxtebd)
         @show update
         push!(Mpslist, update)
-        magnet = magnetization!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
+        magnet = magnetization2!(update, Betalist[i], site_measure, J, Dmaxtebd, cutoff)
         push!(Magnetlist, magnet)
         push!(Magnetexact, ising_magnetization(Betalist[i]))
     end
 end
 
-#void()
+void()
 ############### Graphs ############
 
-#gr()
+gr()
 
-#plot(Betalist, Magnetlist, label="tebd")
-#plot!(Betalist, Magnetexact, label="exact")
+plot(Betalist, Magnetlist, label="tebd")
+plot!(Betalist, Magnetexact, label="exact")
